@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>com.atomic.peakchatemojis</AssemblyName>
+    <AssemblyTitle>PEAKChatEmojis</AssemblyTitle>
+    <ThunderstoreName>PEAK_Chat_Emojis</ThunderstoreName>
+    <Version>0.1.1</Version>
+    <ThunderstoreDescription>Adds emoji/emote support to PeakTextChat!</ThunderstoreDescription>
+    <!--
+        Communities and package categories metadata for publishing with ThunderPipe.
+        Communities: https://thunderstore.io/api/experimental/community/
+        Categories: https://thunderstore.io/api/experimental/community/peak/category/
+    -->
+    <ThunderstoreCommunities>peak</ThunderstoreCommunities>
+    <ThunderstoreCategories>mods</ThunderstoreCategories>
+    <IsThunderstorePackable>true</IsThunderstorePackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="PeakTextChat">
+      <HintPath>$(PeakBepInExDir)\plugins\borealityy-PeakTextChat\PeakTextChat.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!--
+    Define mod files to copy to the relative BepInEx directory after build
+    and where they are packed to when building a Thunderstore package
+  -->
+  <ItemGroup>
+    <ThunderstoreFile Include="$(TargetPath)" Destination="plugins/" />
+  </ItemGroup>
+
+  <!-- Thunderstore package metadata -->
+  <ItemGroup>
+    <ThunderstorePackageFile Include="$(SolutionRoot)README.md" />
+    <ThunderstorePackageFile Include="$(SolutionRoot)CHANGELOG.md" />
+    <ThunderstorePackageFile Include="$(SolutionRoot)icon.png" />
+    <ThunderstorePackageFile Include="$(SolutionRoot)LICENSE" />
+
+    <ThunderstoreDependency Include="BepInEx-BepInExPack_PEAK" Version="5.4.75301" />
+	<ThunderstoreDependency Include="borealityy-PeakTextChat" Version="1.3.4" />
+  </ItemGroup>
+</Project>
