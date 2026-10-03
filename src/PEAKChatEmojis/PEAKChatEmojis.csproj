@@ -27,6 +27,7 @@
   -->
   <ItemGroup>
     <ThunderstoreFile Include="$(TargetPath)" Destination="plugins/" />
+	<ThunderstoreFile Include="Emojis/**" Destination="plugins/Emojis" />
   </ItemGroup>
 
   <!-- Thunderstore package metadata -->
