@@ -16,7 +16,7 @@
     <IsThunderstorePackable>true</IsThunderstorePackable>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="PeakTextChat">
+    <Reference Include="PeakTextChat" Publicize="true">
       <HintPath>$(PeakBepInExDir)\plugins\borealityy-PeakTextChat\PeakTextChat.dll</HintPath>
     </Reference>
   </ItemGroup>

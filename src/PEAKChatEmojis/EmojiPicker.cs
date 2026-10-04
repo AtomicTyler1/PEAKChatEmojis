@@ -31,10 +31,10 @@ namespace PEAKChatEmojis
 
         private static T Read<T>(object owner, string field)
         {
-            return (T)AccessTools.Field(typeof(PeakTextChat.TextChatDisplay), field).GetValue(owner);
+            return (T)AccessTools.Field(typeof(TextChatDisplay), field).GetValue(owner);
         }
 
-        public void Init(PeakTextChat.TextChatDisplay owner)
+        public void Init(TextChatDisplay owner)
         {
             display = owner;
             input = Read<TMP_InputField>(owner, "inputField");

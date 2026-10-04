@@ -43,7 +43,7 @@
       Include="$(ManagedDir)*.dll"
       Exclude="$(ManagedDir)Mono*.dll;$(ManagedDir)netstandard.dll;$(ManagedDir)System*.dll;$(ManagedDir)mscorlib.dll"
     />
-    <Reference Include="@(LocalReferences)" Private="false" />
+    <Reference Include="@(LocalReferences)" Private="false" Publicize="true" />
     <Reference Include="$(ManagedDir)Assembly-CSharp.dll" Private="false" Publicize="true" />
   </ItemGroup>
 

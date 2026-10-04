@@ -107,20 +107,18 @@ namespace PEAKChatEmojis
     {
         private static readonly Regex EmojiIdentifier = new Regex(@":([a-zA-Z0-9_\-~]+):", RegexOptions.Compiled);
         private static readonly Regex SpriteTag = new Regex("<sprite name=\"[^\"]*\">", RegexOptions.Compiled);
-        private static readonly System.Reflection.FieldInfo ViewportField = AccessTools.Field(typeof(TextChatDisplay), "chatLogViewportTransform");
-        private static readonly System.Reflection.FieldInfo BoxSizeField = AccessTools.Field(typeof(TextChatDisplay), "boxSize");
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(TextChatDisplay), "Start")]
+        [HarmonyPatch(typeof(TextChatDisplay), nameof(TextChatDisplay.Start))]
         public static void StartPostfix(TextChatDisplay __instance)
         {
             if (Plugin.EmojiAssets.Count == 0) return;
-            if ((bool)AccessTools.Field(typeof(TextChatDisplay), "usingIMGUI").GetValue(__instance)) return;
+            if (__instance.usingIMGUI) return;
             __instance.gameObject.AddComponent<EmojiPicker>().Init(__instance);
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(TextChatDisplay), "CreateText")]
+        [HarmonyPatch(typeof(TextChatDisplay), nameof(TextChatDisplay.CreateText))]
         public static void CreateTextPostfix(TMP_Text __result)
         {
             if (__result != null && Plugin.PrimarySpriteAsset != null)
@@ -130,7 +128,7 @@ namespace PEAKChatEmojis
         }
 
         [HarmonyPrefix]
-        [HarmonyPatch(typeof(TextChatDisplay), nameof(TextChatDisplay.AddMessage), new Type[] { typeof(string) })]
+        [HarmonyPatch(typeof(TextChatDisplay), nameof(TextChatDisplay.AddMessage), typeof(string))]
         public static void AddMessagePrefix(ref string message)
         {
             if (string.IsNullOrEmpty(message) || Plugin.PrimarySpriteAsset == null) return;
@@ -142,19 +140,19 @@ namespace PEAKChatEmojis
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(TextChatDisplay), nameof(TextChatDisplay.AddMessage), new Type[] { typeof(string) })]
+        [HarmonyPatch(typeof(TextChatDisplay), nameof(TextChatDisplay.AddMessage), typeof(string))]
         public static void AddMessagePostfix(TextChatDisplay __instance)
         {
             try
             {
-                var viewport = ViewportField.GetValue(__instance) as RectTransform;
+                var viewport = __instance.chatLogViewportTransform;
                 if (viewport == null || viewport.childCount == 0) return;
 
                 var rect = viewport.GetChild(viewport.childCount - 1) as RectTransform;
                 var text = rect != null ? rect.GetComponent<TMP_Text>() : null;
                 if (text == null || !text.text.Contains("<sprite")) return;
 
-                var box = (Vector2)BoxSizeField.GetValue(__instance);
+                var box = __instance.boxSize;
                 string flat = SpriteTag.Replace(text.text, "W");
                 float height = text.GetPreferredValues(flat, box.x - 24f, 1000f).y;
                 rect.sizeDelta = new Vector2(0f, height);
