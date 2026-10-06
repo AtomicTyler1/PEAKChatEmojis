@@ -14,7 +14,9 @@ namespace PEAKChatEmojis
 {
     public class EmojiPicker : MonoBehaviour
     {
-        private const int MaxRows = 8;
+        private const int VisibleRows = 9;
+        private const float RepeatDelay = 0.35f;
+        private const float RepeatInterval = 0.04f;
 
         private TextChatDisplay display;
         private TMP_InputField input;
@@ -25,9 +27,13 @@ namespace PEAKChatEmojis
         private bool dirty;
         private bool open;
         private int selected;
+        private int scrollOffset;
         private int tokenStart;
         private int tokenEnd;
         private string lastText = "";
+
+        private float nextRepeatTime;
+        private int heldDirection;
 
         private static T Read<T>(object owner, string field)
         {
@@ -80,7 +86,7 @@ namespace PEAKChatEmojis
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
-            for (int i = 0; i < MaxRows; i++)
+            for (int i = 0; i < VisibleRows; i++)
             {
                 rows.Add(EmojiRow.Create(this, i, panel, rowHeight, fontSize, textColor, panelColor));
             }
@@ -134,8 +140,7 @@ namespace PEAKChatEmojis
                 Plugin.EmojiAssets.Keys
                     .Where(k => k.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
                     .OrderBy(k => k.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                    .ThenBy(k => k, StringComparer.OrdinalIgnoreCase)
-                    .Take(MaxRows));
+                    .ThenBy(k => k, StringComparer.OrdinalIgnoreCase));
 
             if (matches.Count == 0)
             {
@@ -146,6 +151,7 @@ namespace PEAKChatEmojis
             tokenStart = start;
             tokenEnd = caret;
             selected = 0;
+            scrollOffset = 0;
             open = true;
             panel.gameObject.SetActive(true);
             UpdateRows();
@@ -153,11 +159,15 @@ namespace PEAKChatEmojis
 
         private void UpdateRows()
         {
+            int maxOffset = Mathf.Max(0, matches.Count - VisibleRows);
+            scrollOffset = Mathf.Clamp(scrollOffset, 0, maxOffset);
+
             for (int i = 0; i < rows.Count; i++)
             {
-                if (i < matches.Count)
+                int abs = scrollOffset + i;
+                if (abs < matches.Count)
                 {
-                    rows[i].Show(matches[i], Plugin.EmojiAssets[matches[i]], i == selected);
+                    rows[i].Show(matches[abs], Plugin.EmojiAssets[matches[abs]], abs == selected);
                 }
                 else
                 {
@@ -166,29 +176,61 @@ namespace PEAKChatEmojis
             }
         }
 
+        private void EnsureSelectedVisible()
+        {
+            if (selected < scrollOffset)
+            {
+                scrollOffset = selected;
+            }
+            else if (selected >= scrollOffset + VisibleRows)
+            {
+                scrollOffset = selected - VisibleRows + 1;
+            }
+        }
+
+        private void MoveSelection(int direction)
+        {
+            if (matches.Count == 0) return;
+            selected = (selected + direction + matches.Count) % matches.Count;
+            EnsureSelectedVisible();
+            UpdateRows();
+        }
+
+        private void ScrollWindow(int rowsToScroll)
+        {
+            if (matches.Count <= VisibleRows) return;
+            scrollOffset += rowsToScroll;
+            scrollOffset = Mathf.Clamp(scrollOffset, 0, matches.Count - VisibleRows);
+            selected = Mathf.Clamp(selected, scrollOffset, scrollOffset + VisibleRows - 1);
+            UpdateRows();
+        }
+
         private void Hide()
         {
             open = false;
+            heldDirection = 0;
             if (panel != null) panel.gameObject.SetActive(false);
         }
 
         public void Hover(int index)
         {
-            if (!open || index == selected || index >= matches.Count) return;
-            selected = index;
+            int abs = scrollOffset + index;
+            if (!open || abs == selected || abs >= matches.Count) return;
+            selected = abs;
             UpdateRows();
         }
 
         public void Accept(int index, bool refocus)
         {
-            if (!open || index < 0 || index >= matches.Count) return;
+            int abs = scrollOffset + index;
+            if (!open || index < 0 || abs < 0 || abs >= matches.Count) return;
 
             string text = input.text ?? "";
             if (text != lastText || tokenEnd > text.Length) return;
 
             string tail = text.Substring(tokenEnd);
             bool spaceFollows = tail.StartsWith(" ");
-            string insert = ":" + matches[index] + ":" + (spaceFollows ? "" : " ");
+            string insert = ":" + matches[abs] + ":" + (spaceFollows ? "" : " ");
             int caret = tokenStart + insert.Length + (spaceFollows ? 1 : 0);
 
             input.SetTextWithoutNotify(text.Substring(0, tokenStart) + insert + tail);
@@ -225,19 +267,46 @@ namespace PEAKChatEmojis
                 return;
             }
 
-            if (Input.GetKeyDown(KeyCode.DownArrow))
+            HandleArrowKeys();
+
+            float wheel = Input.mouseScrollDelta.y;
+            if (Mathf.Abs(wheel) > 0.01f)
             {
-                selected = (selected + 1) % matches.Count;
-                UpdateRows();
+                ScrollWindow(wheel > 0f ? -1 : 1);
             }
-            else if (Input.GetKeyDown(KeyCode.UpArrow))
+
+            if (Input.GetKeyDown(KeyCode.Tab))
             {
-                selected = (selected - 1 + matches.Count) % matches.Count;
-                UpdateRows();
+                Accept(selected - scrollOffset, false);
             }
-            else if (Input.GetKeyDown(KeyCode.Tab))
+        }
+
+        private void HandleArrowKeys()
+        {
+            int direction = 0;
+            if (Input.GetKeyDown(KeyCode.DownArrow)) direction = 1;
+            else if (Input.GetKeyDown(KeyCode.UpArrow)) direction = -1;
+
+            if (direction != 0)
             {
-                Accept(selected, false);
+                heldDirection = direction;
+                nextRepeatTime = Time.unscaledTime + RepeatDelay;
+                MoveSelection(direction);
+                return;
+            }
+
+            if (heldDirection != 0)
+            {
+                KeyCode key = heldDirection > 0 ? KeyCode.DownArrow : KeyCode.UpArrow;
+                if (!Input.GetKey(key))
+                {
+                    heldDirection = 0;
+                }
+                else if (Time.unscaledTime >= nextRepeatTime)
+                {
+                    nextRepeatTime = Time.unscaledTime + RepeatInterval;
+                    MoveSelection(heldDirection);
+                }
             }
         }
 
@@ -323,8 +392,14 @@ namespace PEAKChatEmojis
                 {
                     aspect.aspectRatio = (float)texture.width / texture.height;
                 }
-                label.text = ":" + name + ":";
-                label.ForceMeshUpdate();
+
+                string newLabel = ":" + name + ":";
+                if (label.text != newLabel)
+                {
+                    label.text = newLabel;
+                    label.ForceMeshUpdate();
+                }
+
                 background.color = highlighted ? selectedColor : Color.clear;
             }
 

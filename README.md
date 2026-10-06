@@ -31,6 +31,7 @@ Its an addon for [PeakTextChat](https://thunderstore.io/c/peak/p/borealityy/Peak
 By default the mod comes with 16 emojis but other mods can add even more without touching any code!
 
 Type `:emojiName:` for an emoji. Typing `:` will bring up an autocomplete panel, use the arrow keys and press tab to autofill in the emoji!
+You can scroll past the 9 emoji previews by using your arrow keys, this means you do not need to memorize the names of the emojis, just scroll through them and find the one you want!
 
 ## Networking
 

@@ -55,7 +55,17 @@ namespace PEAKChatEmojis
             try
             {
                 string name = Path.GetFileNameWithoutExtension(path);
-                if (EmojiAssets.ContainsKey(name)) return;
+                if (EmojiAssets.ContainsKey(name))
+                {
+                    string oldName = name;
+                    int suffix = 1;
+                    while (EmojiAssets.ContainsKey(name + "~" + suffix))
+                    {
+                        suffix++;
+                    }
+                    name += "~" + suffix;
+                    Log.LogWarning($"Duplicate emoji name {oldName} in {path}. Renamed to {name}");
+                }
 
                 var texture = new Texture2D(2, 2, TextureFormat.RGBA32, true);
                 if (!ImageConversion.LoadImage(texture, File.ReadAllBytes(path)))
@@ -133,10 +143,53 @@ namespace PEAKChatEmojis
         {
             if (string.IsNullOrEmpty(message) || Plugin.PrimarySpriteAsset == null) return;
 
-            message = EmojiIdentifier.Replace(message, m =>
-                Plugin.EmojiAssets.ContainsKey(m.Groups[1].Value)
-                    ? $"<sprite name=\"{m.Groups[1].Value}\">"
-                    : m.Value);
+            try
+            {
+                int bodyStartIndex = 0;
+
+                int matchIndex = message.IndexOf("]</color>: ");
+                if (matchIndex != -1)
+                {
+                    bodyStartIndex = matchIndex + "]</color>: ".Length;
+                }
+                else if ((matchIndex = message.IndexOf("</color>: ")) != -1)
+                {
+                    bodyStartIndex = matchIndex + "</color>: ".Length;
+                }
+                else if ((matchIndex = message.IndexOf("]: ")) != -1)
+                {
+                    bodyStartIndex = matchIndex + "]: ".Length;
+                }
+
+                string header = message.Substring(0, bodyStartIndex);
+                string body = message.Substring(bodyStartIndex);
+
+                bool containsValidEmoji = false;
+                string processedBody = EmojiIdentifier.Replace(body, m =>
+                {
+                    if (Plugin.EmojiAssets.ContainsKey(m.Groups[1].Value))
+                    {
+                        containsValidEmoji = true;
+                        return $"<sprite name=\"{m.Groups[1].Value}\">";
+                    }
+                    return m.Value;
+                });
+
+                if (containsValidEmoji)
+                {
+                    string bodyWithoutSprites = SpriteTag.Replace(processedBody, string.Empty);
+                    if (string.IsNullOrWhiteSpace(bodyWithoutSprites))
+                    {
+                        processedBody = $"<size=\"40\">{processedBody}</size>";
+                    }
+                }
+
+                message = header + processedBody;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogError($"Error formatting chat message in AddMessagePrefix: {ex}");
+            }
         }
 
         [HarmonyPostfix]

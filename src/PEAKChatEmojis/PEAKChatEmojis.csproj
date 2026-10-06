@@ -4,7 +4,7 @@
     <AssemblyName>com.atomic.peakchatemojis</AssemblyName>
     <AssemblyTitle>PEAKChatEmojis</AssemblyTitle>
     <ThunderstoreName>PEAK_Chat_Emojis</ThunderstoreName>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <ThunderstoreDescription>Adds emoji/emote support to PeakTextChat!</ThunderstoreDescription>
     <!--
         Communities and package categories metadata for publishing with ThunderPipe.
